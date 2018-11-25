@@ -1,0 +1,3 @@
+[submodule "arnanutil"]
+	path = arnanutil
+	url = git@github.com:xebecnan/arnanutil.git
