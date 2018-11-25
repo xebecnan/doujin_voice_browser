@@ -1,0 +1,57 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+  <title>同人音声浏览器</title>
+
+  <link rel="stylesheet" href="css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+  <link rel="stylesheet" href="css/doujin_voice.css">
+
+  <script src="js/masonry.pkgd.min.js"></script>
+  <script src="js/jquery-3.3.1.min.js"></script>
+  <script src="js/bootstrap.bundle.min.js"></script>
+
+  <script type="text/javascript" src="/eel.js"></script>
+  <script type="text/javascript" src="js/doujin_voice.js"></script>
+</head>
+<body>
+
+<div class="container-fluid">
+
+<h1>同人音声浏览器</h1>
+
+<h3>设置</h3>
+
+<div class="input-group mb-3">
+  <input type="text" class="form-control sel-on-focus" placeholder="Library Path" aria-describedby="button-addon2" id="text_library_root">
+</div>
+
+<h3>浏览</h3>
+
+<div class="mb-3">
+  <button class="btn" type="button" id="btn_refresh_library">刷新库</button>
+</div>
+
+<ul id="lib_list">
+
+  <li id="lib_item_tpl" class="lib-item">
+    <img />
+    <div class="op"><a href='#'>[打开目录]</a></div>
+    <h3 class="title"></h3>
+  </li>
+
+</ul>
+
+<div class="input-group mb-3">
+  <input type="text" class="form-control sel-on-focus" placeholder="RJ" aria-label="RJ" aria-describedby="button-addon2" id="text_fullname">
+  <div class="input-group-append">
+    <button class="btn btn-copy btn-w100" type="button">Copy</button>
+  </div>
+</div>
+
+</div>
+
+</body>
+</html>

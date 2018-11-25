@@ -1,0 +1,36 @@
+.custom-file-label::after {
+  width: 100px;
+  text-align: center;
+}
+
+.btn-w100 {
+  width: 100px;
+}
+
+li.lib-item {
+  float: left;
+  display:inline;
+  border: 1px solid #E5EDF2;
+  border-bottom-color: #C2D5E3;
+  margin: 0 4px 10px;
+  padding: 5px;
+  font: 12px/1.5 Tahoma,Helvetica,'mingliu',sans-serif;
+  min-width: 200px;
+}
+
+li.lib-item h3 {
+  max-width: 250px;
+  margin: 0;
+  font: 12px/1.5 Tahoma,Helvetica,'mingliu',sans-serif;
+}
+
+li.lib-item > .op {
+    display: inline-block;
+    float: right;
+}
+
+li.lib-item > img {
+    display:block;
+    height: 200px;
+    max-width: 250px;
+}
