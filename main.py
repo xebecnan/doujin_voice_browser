@@ -2,6 +2,7 @@
 
 import os
 import re
+import io
 import eel
 import time
 import base64
@@ -11,12 +12,18 @@ import webbrowser
 import json
 import shutil
 import mimetypes
+import subprocess
+
+from rjdb import RJDB
+from PIL import Image
 
 from arnanutil.io_util import prepare_dir, get_file_size
 from arnanutil.http_util import HttpGet
 from arnanutil.log_util import logf_env, logf
 from arnanutil.hcache import UTF8HCache
-from arnanutil.hash_util import get_file_md5
+from arnanutil.hash_util import get_file_hash, get_hash
+
+from workinfo import WorkInfoBuilder
 
 LOG_DIR = 'log'
 HTTP_CACHE_DIR = 'http_cache'
@@ -65,102 +72,52 @@ class AppData(object):
     def set(self, k, v):
         self.data[k] = v
 
-def is_image(filename):
-    filetype, _ = mimetypes.guess_type(filename)
-    if not filetype:
-        return False
-    maintype, _ = filetype.split('/', 1)
-    # print '--', filetype, maintype, maintype == 'image'
-    # print filename.decode('gbk', 'replace').encode('gbk', 'replace')
-    return maintype == 'image'
 
-
-
-class WorkInfo(object):
-    def __init__(self, db, rj, dirname):
-        self.db = db
-        self.rj = rj
-        self.dirname = dirname
-
-    def init_image_path(self):
-        max_size = 0
-        target = None
-        for root, dirs, names in os.walk(self.dirname):
-            for name in names:
-                if is_image(name):
-                    path = os.path.join(root, name)
-                    size = get_file_size(path)
-                    if not target or size > max_size:
-                        max_size = size
-                        target = path
-        return target
-
-
-    def get_image_path(self):
-        key = self.rj + '.image_path'
-        image_path = self.db.get(key)
-        if not image_path:
-            image_path = self.init_image_path() or ''
-            self.db.set(key, image_path)
-        return image_path
-
-
-    def get_image_data(self):
-        image_path = self.get_image_path()
-        if not image_path:
-            return None
-
-        # print('image_path:', image_path)
-
-        image_type, _ = mimetypes.guess_type(image_path)
-        # print 'image_type:', image_type
-
-        with open(image_path, 'rb') as f:
-            c = f.read()
-        return 'data:' + image_type + ';base64,' + base64.b64encode(c)
-
-    def dump(self):
-        return {
-            # 'image_data': self.get_image_data(),
-            'image_path': self.get_image_path(),
-            'rj': self.rj,
-        }
 
 class App(object):
     def __init__(self):
         self.appdata = AppData()
         self.appdata.load()
-        self.lib = []
-        self.db = UTF8HCache(DATA_CACHE_DIR)
+        # self.db = UTF8HCache(DATA_CACHE_DIR)
+        self.db = RJDB()
 
     # def app_expose(self, func):
     #     def wrapper(*args, **kwds):
     #         return func(self, *args, **kwds)
     #     return wrapper
 
-    def get_work_info(self, meta):
-        return WorkInfo(self.db, meta['rj'], meta['dirname'])
+    # def get_work_info(self, meta):
+    #     return WorkInfoBuilder(self.db, meta['rj'], meta['dirname'])
 
     def refresh_library(self):
         lr = self.appdata.get('LIBRARY_ROOT')
         if not lr:
             return False
-        lib = []
         for name in os.listdir(lr):
             dirname = os.path.join(lr, name)
             if os.path.isdir(dirname):
                 m = re.search(r'(rj\d+)', name.lower())
                 if m:
                     rj = m.group(1).upper()
-                    lib.append({
-                        'rj': rj,
-                        'dirname': dirname,
-                    })
-        self.lib = lib
+                    print 'refresh_library', rj
+                    WorkInfoBuilder(self.db).create(rj, dirname)
+                    # self.db.add(rj=rj, path=dirname)
+        print 'refresh_library done'
+        self.db.commit()
         return True
 
-    def get_lib(self):
-        return [self.get_work_info(x).dump() for x in self.lib]
+    def get_lib(self, from_index, to_index):
+        print 'get_lib',from_index, to_index
+        return [work.dump() for work in self.db.iter_works(from_index, to_index)]
+
+    def get_lib_size(self):
+        return self.db.get_works_count()
+
+    def get_work_thumbnail_data(self, rj):
+        if not rj: return None
+
+        work = self.db.get_work(rj)
+        return work and work.get_thumbnail_data()
 
 def main():
     eel.init('web')
@@ -184,24 +141,36 @@ def main():
         webbrowser.open(url)
 
     @eel.expose
+    def open_file_in_explorer(path):
+        subprocess.Popen(('explorer', '/select,', path))
+
+    @eel.expose
+    def open_explorer_by_rj(rj):
+        pass
+
+    @eel.expose
     def refresh_library():
         return app.refresh_library()
 
     @eel.expose
-    def get_lib():
-        return app.get_lib()
+    def get_lib(f, t):
+        return app.get_lib(f, t)
 
     @eel.expose
-    def load_work_image(image_path):
-        if not image_path:
-            return None
-        image_type, _ = mimetypes.guess_type(image_path)
-        md5 = get_file_md5(image_path)
-        dst = os.path.join(TMP_DIR, md5)
-        if not os.path.isfile(dst) or get_file_md5(dst) != md5:
-            shutil.copy(image_path, dst)
-        image_url = 'tmp/' + md5
-        return image_url
+    def get_lib_size():
+        return app.get_lib_size()
+
+    @eel.expose
+    def load_work_image(rj):
+        return app.get_work_thumbnail_data(rj)
+
+        # image_type, _ = mimetypes.guess_type(image_path)
+        # md5 = get_file_hash(image_path)
+        # dst = os.path.join(TMP_DIR, md5)
+        # if not os.path.isfile(dst) or get_file_hash(dst) != md5:
+        #     shutil.copy(image_path, dst)
+        # image_url = 'tmp/' + md5
+        # return image_url
 
     web_app_options = {
         'mode': "chrome-app", #or "chrome"

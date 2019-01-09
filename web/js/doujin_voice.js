@@ -65,7 +65,9 @@ async function reload_library_root() {
 }
 
 async function update_lib_list() {
-  let list = await eel.get_lib()();
+  let lib_size = await eel.get_lib_size()();
+  // let page = lib_size > 20 ? 20 : lib_size;
+  let list = await eel.get_lib(0, lib_size)();
   lib_list.empty();
   images = [];
   if (list) {
@@ -73,9 +75,11 @@ async function update_lib_list() {
       let e = lib_item_tpl.clone();
       let v = list[i];
       e.find('h3.title').text(v.rj);
-      e.find('img').attr('data-src', v.image_path);
+      e.find('img').attr('data-src', v.rj);
+      // e.find('img').attr('data-src', v.thumbnail_data);
       e.find('div.op > a').click(function(e) {
         e.preventDefault();
+        eel.open_explorer_by_rj(v.rj);
       });
       e.show();
       lib_list.append(e);
@@ -99,7 +103,12 @@ $('#btn_refresh_library').click(async function() {
   }
 });
 
+$('#btn_update_library').click(async function() {
+  update_lib_list();
+});
+
 reload_library_root();
+update_lib_list();
 
 processScroll();
 addEventListener('scroll', processScroll);

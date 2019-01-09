@@ -1,6 +1,9 @@
 /data_cache
 /web/tmp
 
+# pydblite DB files
+*.pdl
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
