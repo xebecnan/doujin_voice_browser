@@ -2,6 +2,16 @@ $(function() {
 
 let lib_list = $('#lib_list')
   , lib_item_tpl = $('#lib_item_tpl')
+  , fetchText = async function(url) {
+      let v = await fetch(url);
+      let s = await v.text();
+      return s;
+    }
+  , fetchJson = async function(url) {
+      let v = await fetch(url);
+      let s = await v.json();
+      return s;
+    }
   , elementInViewport = function(el) {
       var rect = el.getBoundingClientRect()
       return (
@@ -20,7 +30,7 @@ let lib_list = $('#lib_list')
   , images = new Array()
   , loadImage = async function(el, fn) {
       let img = new Image()
-        , src = await eel.load_work_image($(el).attr('data-src'))()
+        , src = await fetchText('/a/load_work_image/' + $(el).attr('data-src'));
         ;
       img.onload = function() {
         $(el).attr('src', src);
@@ -40,14 +50,6 @@ let lib_list = $('#lib_list')
 
 lib_item_tpl.hide();
 
-$('button.btn-open-url').click(function() {
-  let e = $(this).parent().parent().find('input.form-control').first();
-  let url = e.val();
-  if (url) {
-    eel.open_url(url);
-  }
-});
-
 $('button.btn-copy').click(function() {
   let e = $(this).parent().parent().find('input.form-control').first();
   e.focus();
@@ -60,14 +62,13 @@ $('input.sel-on-focus').click(function() {
 });
 
 async function reload_library_root() {
-  let v = await eel.get_library_root()();
+  let v = await fetchText('/a/get_library_root');
   $('#text_library_root').val(v);
 }
 
 async function update_lib_list() {
-  let lib_size = await eel.get_lib_size()();
-  // let page = lib_size > 20 ? 20 : lib_size;
-  let list = await eel.get_lib(0, lib_size)();
+  let lib_size = await fetchText('/a/get_lib_size');
+  let list = (await fetchJson('/a/get_lib/0/' + lib_size)).list;
   lib_list.empty();
   images = [];
   if (list) {
@@ -79,7 +80,7 @@ async function update_lib_list() {
       // e.find('img').attr('data-src', v.thumbnail_data);
       e.find('div.op > a').click(function(e) {
         e.preventDefault();
-        eel.open_explorer_by_rj(v.rj);
+        fetch('/a/open_explorer_by_rj/' + v.rj);
       });
       e.show();
       lib_list.append(e);
@@ -90,15 +91,15 @@ async function update_lib_list() {
 }
 
 $('#text_library_root').change(async function() {
-  let v = await eel.set_library_root($(this).val())();
-  if(!v) {
-    reload_library_root();
-  }
+  // let v = await eel.set_library_root($(this).val())();
+  // if(!v) {
+  //   reload_library_root();
+  // }
 });
 
 $('#btn_refresh_library').click(async function() {
-  let ok = await eel.refresh_library()();
-  if (ok) {
+  let ok = await fetch('/a/refresh_library');
+  if (ok == 'ok') {
     update_lib_list();
   }
 });

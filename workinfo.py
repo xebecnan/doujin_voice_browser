@@ -102,3 +102,6 @@ class WorkInfo(object):
         r = self.rec
         return r['thumbnail_data'] and ('data:image/png;base64,' + base64.b64encode(r['thumbnail_data'])) or None
 
+    def get_path(self):
+        return self.rec.get('path', None)
+

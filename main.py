@@ -1,9 +1,9 @@
 # coding: utf-8
 
 import os
+import sys
 import re
 import io
-import eel
 import time
 import base64
 import random
@@ -13,6 +13,8 @@ import json
 import shutil
 import mimetypes
 import subprocess
+import bottle
+import webbrowser
 
 from rjdb import RJDB
 from PIL import Image
@@ -38,6 +40,8 @@ prepare_dir(TMP_DIR)
 
 j = os.path.join
 http_get = HttpGet(HTTP_CACHE_DIR)
+
+bpp = application = bottle.Bottle()
 
 class AppData(object):
     def __init__(self):
@@ -119,68 +123,77 @@ class App(object):
         work = self.db.get_work(rj)
         return work and work.get_thumbnail_data()
 
+    def get_dir(self, rj):
+        if not rj: return None
+
+        work = self.db.get_work(rj)
+        return work and work.get_path()
+
+app = App()
+
+@bpp.route('/a/get_lib/<f>/<t>')
+def get_lib(f, t):
+    return { 'list': app.get_lib(int(f), int(t)) }
+
+@bpp.route('/a/get_library_root')
+def get_library_root():
+    return app.appdata.get('LIBRARY_ROOT')
+
+def set_library_root(v):
+    if os.path.isdir(v):
+        app.appdata.set('LIBRARY_ROOT', v)
+        app.appdata.save()
+        return True
+    else:
+        return False
+
+def open_url(url):
+    webbrowser.open(url)
+
+def open_file_in_explorer(path):
+    subprocess.Popen(('explorer', '/select,', path))
+
+@bpp.route('/a/open_explorer_by_rj/<rj>')
+def open_explorer_by_rj(rj):
+    path = app.get_dir(rj)
+    subprocess.Popen(('explorer', path.encode(sys.getfilesystemencoding())))
+
+@bpp.route('/a/refresh_library')
+def refresh_library():
+    return app.refresh_library() and 'ok' or 'fail'
+
+@bpp.route('/a/get_lib_size')
+def get_lib_size():
+    return str(app.get_lib_size())
+
+@bpp.route('/a/load_work_image/<rj>')
+def load_work_image(rj):
+    return app.get_work_thumbnail_data(rj)
+
+    # image_type, _ = mimetypes.guess_type(image_path)
+    # md5 = get_file_hash(image_path)
+    # dst = os.path.join(TMP_DIR, md5)
+    # if not os.path.isfile(dst) or get_file_hash(dst) != md5:
+    #     shutil.copy(image_path, dst)
+    # image_url = 'tmp/' + md5
+    # return image_url
+
+@bpp.route('/<path:path>')
+def _static(path):
+    print('static', path)
+    return bottle.static_file(path, root='web')
+
 def main():
-    eel.init('web')
-    app = App()
+    webbrowser.open('http://localhost:9999/index.html')
+    bottle.run(bpp, host='localhost', port=9999, reloader=True)
 
-    @eel.expose
-    def get_library_root():
-        return app.appdata.get('LIBRARY_ROOT')
+    # web_app_options = {
+    #     'mode': "chrome-app", #or "chrome"
+    #     'host': 'localhost',
+    #     'port': 7777,
+    # }
 
-    @eel.expose
-    def set_library_root(v):
-        if os.path.isdir(v):
-            app.appdata.set('LIBRARY_ROOT', v)
-            app.appdata.save()
-            return True
-        else:
-            return False
-
-    @eel.expose
-    def open_url(url):
-        webbrowser.open(url)
-
-    @eel.expose
-    def open_file_in_explorer(path):
-        subprocess.Popen(('explorer', '/select,', path))
-
-    @eel.expose
-    def open_explorer_by_rj(rj):
-        pass
-
-    @eel.expose
-    def refresh_library():
-        return app.refresh_library()
-
-    @eel.expose
-    def get_lib(f, t):
-        return app.get_lib(f, t)
-
-    @eel.expose
-    def get_lib_size():
-        return app.get_lib_size()
-
-    @eel.expose
-    def load_work_image(rj):
-        return app.get_work_thumbnail_data(rj)
-
-        # image_type, _ = mimetypes.guess_type(image_path)
-        # md5 = get_file_hash(image_path)
-        # dst = os.path.join(TMP_DIR, md5)
-        # if not os.path.isfile(dst) or get_file_hash(dst) != md5:
-        #     shutil.copy(image_path, dst)
-        # image_url = 'tmp/' + md5
-        # return image_url
-
-    web_app_options = {
-        'mode': "chrome-app", #or "chrome"
-        'host': 'localhost',
-        'port': 7777,
-    }
-
-    print 'start'
-    eel.start('index.html?s=' + str(time.time()) + str(random.random()), size=(1400, 600), options=web_app_options)
-    print 'after start'
+    # eel.start('index.html?s=' + str(time.time()) + str(random.random()), size=(1400, 600), options=web_app_options)
 
 if __name__ == '__main__':
     with logf_env(LOG_DIR):
